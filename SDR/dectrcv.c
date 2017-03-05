@@ -18,6 +18,8 @@
 #include <poll.h>
 #include <assert.h>
 
+static const char clrscr[] = "\33[3;J\33[H\33[2J";
+
 typedef uint64_t time64_t;
 
 #define FP_SYNC		0xAAE98A
@@ -126,7 +128,7 @@ enum {
 	N_STATS
 };
 
-static const char stats_names[N_STATS][16] = {"FP pkts", "PP pkts", "R-CRC errors", "B-fields"};
+static const char stats_names[N_STATS][16] = {"FP", "PP", "R-CRC errors", "B-fields"};
 
 static time64_t gettime(void) {
 	time64_t res;
@@ -140,6 +142,7 @@ static time64_t gettime(void) {
 
 typedef struct dectrx_s {
 	int sock;
+	uint8_t channel;
 	uint8_t ethbuf[1024];
 	uint64_t sync;
 	int bitcnt;
@@ -148,21 +151,16 @@ typedef struct dectrx_s {
 	
 	/* stats */
 	uint64_t stats[N_STATS];
-	time64_t stats_ts;
-	
 } dectrx_t;
 
-static void dectrx_stats(dectrx_t *drx) {
-	time64_t now = gettime();
-	time64_t delta_t = now - drx->stats_ts;
+static void dectrx_stats(dectrx_t *drx, time64_t delta_t, int multi_ch) {
 	int i;
 
-	if(delta_t<500000000)
-		return;
-
-	drx->stats_ts = now;
-
-	printf("\r");
+	if(multi_ch)
+		printf("ch%d: ",drx->channel);
+	else
+		printf("\r");
+	
 	for(i=0;i<N_STATS;i++) {
 		uint64_t val = drx->stats[i];
 		drx->stats[i]=0;
@@ -170,14 +168,16 @@ static void dectrx_stats(dectrx_t *drx) {
 		val /= delta_t;
 		printf("%s: %5"PRIu64" | ",stats_names[i],val);
 	}
-	fflush(stdout);
+	
+	if(multi_ch)
+		puts("");
+	else
+		fflush(stdout);
 }
 
 static dectrx_t *dectrx_create(uint16_t rxport) {
 	struct sockaddr_in si;
 	dectrx_t *drx = NULL;
-	uint8_t *p;
-	dect_rxhdr_t *rxhdr;
 	int sock, res;
 
 	sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -195,14 +195,9 @@ static dectrx_t *dectrx_create(uint16_t rxport) {
 	drx = calloc(1, sizeof(dectrx_t));
 	
 	drx->sock = sock;
+	drx->channel = 0xff;
 	drx->bitcnt = -1;
 	drx->ethbuf[12] = drx->ethbuf[13] = 0x23;
-
-	p = drx->ethbuf + ETH_HLEN;
-	rxhdr = (dect_rxhdr_t *)p;
-	rxhdr->channel = 0xff;
-	
-	drx->stats_ts = gettime();
 	
 	return drx;
 }
@@ -230,6 +225,7 @@ static int dectrx_rx(dectrx_t *drx, int eth_sock) {
 				uint8_t *op = drx->ethbuf + ETH_HLEN;
 				dect_rxhdr_t *rxhdr = (dect_rxhdr_t *)op;
 				//printf("%08x\n",syncm);
+				rxhdr->channel = drx->channel;
 				rxhdr->preamble[2] = (drx->sync>>24)&0xff;
 				rxhdr->preamble[1] = (drx->sync>>32)&0xff;
 				rxhdr->preamble[0] = (drx->sync>>40)&0xff;
@@ -293,18 +289,40 @@ static int dectrx_rx(dectrx_t *drx, int eth_sock) {
 
 int main(int argc, char **argv) {
 	int res, eth_sock = dummy0_open();
-	dectrx_t *drx = dectrx_create(2323);
-	struct pollfd pfds;
+	int i, channels = 1;
+	dectrx_t *drx[10];
+	struct pollfd pfds[10];
+	time64_t stats_ts;
 	
-	assert(drx);
+	assert((channels <= 10) && (channels >= 1));
 	
-	pfds.fd = drx->sock;
-	pfds.events = POLLIN;
-	
-	while((res=poll(&pfds, 1, 100))>=0) {
-		dectrx_rx(drx, eth_sock);
-		dectrx_stats(drx);
+	for(i=0;i<channels;i++) {
+		drx[i] = dectrx_create(2323+i);
+		drx[i]->channel = i;
+		pfds[i].fd = drx[i]->sock;
+		pfds[i].events = POLLIN;
 	}
+	
+	stats_ts = gettime();
+	
+	while((res=poll(pfds, channels, 100))>=0) {
+		time64_t now = gettime();
+		time64_t delta_t = now - stats_ts;
+		int stats_update = (delta_t >= 500000000);
+		
+		if(stats_update) {
+			stats_ts = now;
+			if(channels > 1)
+				puts(clrscr);
+		}
+		
+		for(i=0;i<channels;i++) {
+			if(pfds[i].revents)
+				dectrx_rx(drx[i], eth_sock);
+			if(stats_update)
+				dectrx_stats(drx[i], delta_t, (channels > 1));
+		}
+	} /* poll loop */
 	
 	return 0;
 }

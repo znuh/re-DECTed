@@ -197,7 +197,8 @@ class dectrx(grc_wxgui.top_block_gui):
         	value=self.channel,
         	callback=self.set_channel,
         	label="channel",
-        	choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+                major_dimension=10,
+                choices=[ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, ],
         	labels=[],
         	style=wx.RA_HORIZONTAL,
         )
@@ -221,7 +222,10 @@ class dectrx(grc_wxgui.top_block_gui):
     def set_channel(self, channel):
         self.channel = channel
         self._channel_chooser.set_value(self.channel)
-        self.set_freq(1897.344e6-(self.channel*1.728e6))
+        if 0 <= channel and channel <= 9:
+            self.set_freq(1897.344e6-(channel*1.728e6))
+        if 10 <= channel and channel <= 32:
+            self.set_freq(1881.792e6+(channel*1.728e6))
 
     def get_samp_rate(self):
         return self.samp_rate

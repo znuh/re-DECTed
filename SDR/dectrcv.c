@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <poll.h>
 #include <assert.h>
+#include <stdbool.h>
 
 static const char clrscr[] = "\33[3;J\33[H\33[2J";
 
@@ -169,10 +170,10 @@ static void dectrx_stats(dectrx_t *drx, time64_t delta_t, int multi_ch) {
 		printf("%s: %5"PRIu64" | ",stats_names[i],val);
 	}
 	
-	if(multi_ch)
-		puts("");
-	else
-		fflush(stdout);
+	//if(multi_ch)
+	//	puts("");
+	//else
+	fflush(stdout);
 }
 
 static dectrx_t *dectrx_create(uint16_t rxport) {
@@ -203,6 +204,8 @@ static dectrx_t *dectrx_create(uint16_t rxport) {
 }
 
 static int dectrx_rx(dectrx_t *drx, int eth_sock) {
+	printf("\nReceived a packet: \n");
+	bool sendedToDummy = false;
 	uint8_t buf[2048], *p=buf, *op;
 	int res = recv(drx->sock, buf, sizeof(buf), 0);
 	
@@ -215,13 +218,17 @@ static int dectrx_rx(dectrx_t *drx, int eth_sock) {
 		
 		for(i=7;i>=0;i--) {
 			uint8_t bit = (*p>>i)&1;
-			
+			if(bit)
+				printf("1");
+			else
+				printf("0");
 			/* find sync */
 			drx->sync<<=1;
 			drx->sync|=bit;
 			syncm = drx->sync & 0xffffff;
 			match = (syncm == FP_SYNC) || (syncm == PP_SYNC);
 			if(match) {
+				printf("Sync found");
 				uint8_t *op = drx->ethbuf + ETH_HLEN;
 				dect_rxhdr_t *rxhdr = (dect_rxhdr_t *)op;
 				//printf("%08x\n",syncm);
@@ -273,9 +280,14 @@ static int dectrx_rx(dectrx_t *drx, int eth_sock) {
 				if(blen)
 					drx->stats[B_FIELDS]++;
 			}
+			printf("Frame len: %d", drx->frame_len);
+			printf("bitcount: %d", drx->bitcnt>>3);
+			
 			if((drx->bitcnt>>3) == drx->frame_len) {
 				/* B-field complete */
 				drx->bitcnt=-1;
+				printf("Send this packet to dummy ethernet interface");
+				sendedToDummy = true;
 				send(eth_sock, drx->ethbuf, ETH_HLEN + sizeof(dect_rxhdr_t) + drx->frame_len, 0);
 				if(drx->verbose) {
 					hexdump(drx->ethbuf + ETH_HLEN + sizeof(dect_rxhdr_t) - 5, drx->frame_len + 5);
@@ -284,6 +296,10 @@ static int dectrx_rx(dectrx_t *drx, int eth_sock) {
 			}
 		} /* foreach incoming bit */
 	} /* foreach incoming byte */
+
+	if(!sendedToDummy){
+		//printf("received something that was not send to dummy interface");
+	}
 	return 0;
 }
 

@@ -23,5 +23,8 @@
 * set channel, gain values and ppm
 * enjoy the DECT packets in **wireshark**
 
+# multichannel
+If you want to use the multichannel feature you have to adjust the number of channels in the `dectrcv.c`.
+
 # example
 ![screenshot](dectrx.png)

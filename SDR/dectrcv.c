@@ -204,7 +204,7 @@ static dectrx_t *dectrx_create(uint16_t rxport) {
 }
 
 static int dectrx_rx(dectrx_t *drx, int eth_sock) {
-	printf("\nReceived a packet: \n");
+	//printf("\nReceived a packet: \n");
 	bool sendedToDummy = false;
 	uint8_t buf[2048], *p=buf, *op;
 	int res = recv(drx->sock, buf, sizeof(buf), 0);
@@ -228,7 +228,7 @@ static int dectrx_rx(dectrx_t *drx, int eth_sock) {
 			syncm = drx->sync & 0xffffff;
 			match = (syncm == FP_SYNC) || (syncm == PP_SYNC);
 			if(match) {
-				printf("Sync found");
+				//printf("Sync found");
 				uint8_t *op = drx->ethbuf + ETH_HLEN;
 				dect_rxhdr_t *rxhdr = (dect_rxhdr_t *)op;
 				//printf("%08x\n",syncm);
@@ -286,7 +286,7 @@ static int dectrx_rx(dectrx_t *drx, int eth_sock) {
 			if((drx->bitcnt>>3) == drx->frame_len) {
 				/* B-field complete */
 				drx->bitcnt=-1;
-				printf("Send this packet to dummy ethernet interface");
+				//printf("Send this packet to dummy ethernet interface");
 				sendedToDummy = true;
 				send(eth_sock, drx->ethbuf, ETH_HLEN + sizeof(dect_rxhdr_t) + drx->frame_len, 0);
 				if(drx->verbose) {
@@ -305,7 +305,7 @@ static int dectrx_rx(dectrx_t *drx, int eth_sock) {
 
 int main(int argc, char **argv) {
 	int res, eth_sock = dummy0_open();
-	int i, channels = 1;
+	int i, channels = 10;
 	dectrx_t *drx[10];
 	struct pollfd pfds[10];
 	time64_t stats_ts;

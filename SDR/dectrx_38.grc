@@ -733,7 +733,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [93, 123]
+    coordinate: [93, 126]
     rotation: 0
     state: enabled
 - name: qtgui_waterfall_sink_x_0
@@ -794,7 +794,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [657, 120]
+    coordinate: [592, 128]
     rotation: 0
     state: true
 - name: qtgui_waterfall_sink_x_0_0

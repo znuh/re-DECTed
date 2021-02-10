@@ -215,7 +215,6 @@ static int dectrx_rx(dectrx_t *drx, int eth_sock) {
 		
 		for(i=7;i>=0;i--) {
 			uint8_t bit = (*p>>i)&1;
-			
 			/* find sync */
 			drx->sync<<=1;
 			drx->sync|=bit;
@@ -273,6 +272,7 @@ static int dectrx_rx(dectrx_t *drx, int eth_sock) {
 				if(blen)
 					drx->stats[B_FIELDS]++;
 			}
+			
 			if((drx->bitcnt>>3) == drx->frame_len) {
 				/* B-field complete */
 				drx->bitcnt=-1;

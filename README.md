@@ -14,12 +14,17 @@
 
 # usage
 * make
-* create dummy0 interface: *sudo modprobe dummy*
+* create dummy0 interface: *sudo modprobe dummy* or *sudo ip link add dummy0 type dummy*
 * start the dummy0 interface: *sudo ifconfig dummy0 up*
 * run dectrcv as root: *sudo ./dectrcv*
-* start the SDR part: *./dectrx.py*
+* start the SDR part: 
+    * If you use gnuradio version <= 3.7 : *./dectrx_37.py*
+    * If you use gnuradio version >= 3.8 : *./dectrx_38.py*
 * set channel, gain values and ppm
 * enjoy the DECT packets in **wireshark**
+
+# multichannel
+If you want to use the multichannel feature you have to adjust the number of channels in the `dectrcv.c`.
 
 # example
 ![screenshot](dectrx.png)

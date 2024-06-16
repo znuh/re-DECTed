@@ -18,8 +18,9 @@
 * start the dummy0 interface: *sudo ifconfig dummy0 up*
 * run dectrcv as root: *sudo ./dectrcv*
 * start the SDR part: 
-    * If you use gnuradio version <= 3.7 : *./dectrx_37.py*
+    * If you use gnuradio version >= 3.10 : *./dectrx_310.py*
     * If you use gnuradio version >= 3.8 : *./dectrx_38.py*
+    * If you use gnuradio version <= 3.7 : *./dectrx_37.py*
 * set channel, gain values and ppm
 * enjoy the DECT packets in **wireshark**
 
